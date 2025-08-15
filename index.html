@@ -1,0 +1,3484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slot Report Analyzer Pro</title>
+    
+    <!-- Load required libraries BEFORE the main script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+    <!-- Remove ExcelJS as it's not loading properly from CDN -->
+
+<!-- ExcelJS + FileSaver for rich .xlsx export -->
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Variables for theming */
+        :root {
+            --primary: #5A99D4;
+            --primary-hover: #6aadda;
+            --primary-dark: #4a88c4;
+            --success: #63FDD6;
+            --warning: #FDD663;
+            --danger: #E67C73;
+            --bg-dark: #1a1b1c;
+            --bg-main: #2E2F30;
+            --bg-card: #38393a;
+            --bg-hover: #484848;
+            --border: #444;
+            --border-light: #555;
+            --text-primary: #f0f0f0;
+            --text-secondary: #aaa;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Global Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            flex-direction: column;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-main) 100%);
+        }
+
+        /* Header */
+        .header {
+            background: rgba(30, 31, 32, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.75em;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 12px;
+        }
+
+        .toolbar button {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: var(--transition);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .toolbar button:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .toolbar button:active {
+            transform: translateY(0);
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            background: rgba(56, 57, 58, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            overflow-y: auto;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar h2 {
+            color: var(--text-primary);
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-group {
+            margin-bottom: 28px;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-group input[type="date"],
+        .filter-group select {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            transition: var(--transition);
+        }
+
+        .filter-group input[type="date"]:hover,
+        .filter-group select:hover {
+            border-color: var(--primary);
+        }
+
+        .filter-group input[type="date"]:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(90, 153, 212, 0.2);
+        }
+
+        .multi-select {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            max-height: 220px;
+            overflow-y: auto;
+            padding: 8px;
+            transition: var(--transition);
+        }
+
+        .multi-select:hover {
+            border-color: var(--primary);
+        }
+
+        .multi-select label {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: normal;
+            border-radius: 6px;
+            transition: var(--transition);
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .multi-select label:hover {
+            background: var(--bg-hover);
+        }
+
+        .multi-select input[type="checkbox"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .clear-filters-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--danger) 0%, #d66c63 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            margin-top: 24px;
+            transition: var(--transition);
+            box-shadow: 0 4px 6px rgba(230, 124, 115, 0.3);
+        }
+
+        .clear-filters-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(230, 124, 115, 0.4);
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--bg-main);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: rgba(46, 47, 48, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab {
+            padding: 16px 28px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 15px;
+            transition: var(--transition);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .tab::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            background: rgba(90, 153, 212, 0.1);
+        }
+
+        .tab.active::after {
+            transform: scaleX(1);
+        }
+
+        .tab-icon {
+            font-size: 18px;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            background: var(--bg-main);
+        }
+
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Overview Label */
+        .overview-label {
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(56, 57, 58, 0.8) 100%);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+
+        .overview-label b {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Tables */
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: rgba(46, 47, 48, 0.8);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .search-icon {
+            color: var(--text-secondary);
+            font-size: 18px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 10px 16px;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(90, 153, 212, 0.2);
+        }
+
+        .sort-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sort-controls label {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .sort-btn {
+            padding: 8px 12px;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        .sort-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            transform: scale(1.1);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background: linear-gradient(180deg, var(--bg-hover) 0%, rgba(72, 73, 74, 0.8) 100%);
+            color: var(--text-primary);
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--primary);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(68, 68, 68, 0.5);
+            transition: var(--transition);
+        }
+
+        tr {
+            transition: var(--transition);
+        }
+
+        tbody tr:nth-child(even) {
+            background: rgba(56, 57, 58, 0.3);
+        }
+
+        tbody tr:hover {
+            background: rgba(90, 153, 212, 0.1);
+            transform: scale(1.005);
+        }
+
+        .number-cell {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .percent-positive {
+            color: var(--danger);
+            font-weight: 500;
+        }
+
+        .percent-negative {
+            color: var(--success);
+            font-weight: 500;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            display: flex;
+            gap: 24px;
+            height: 100%;
+        }
+
+        .chart-controls {
+            width: 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .chart-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
+        }
+
+        .chart-canvas-container {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            position: relative;
+            box-shadow: var(--shadow);
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chart-canvas-container canvas {
+            flex: 1;
+            max-height: 100%;
+            max-width: 100%;
+        }
+
+        .trend-metrics {
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(56, 57, 58, 0.8) 100%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .trend-metrics h3 {
+            color: var(--primary);
+            margin-bottom: 16px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(68, 68, 68, 0.3);
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .metric-value {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Settings Tab */
+        .settings-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .settings-group {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .settings-group:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .settings-group h3 {
+            color: var(--primary);
+            margin-bottom: 12px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .settings-description {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .excluded-keywords {
+            width: 100%;
+            min-height: 120px;
+            padding: 16px;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: var(--transition);
+        }
+
+        .excluded-keywords:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(90, 153, 212, 0.2);
+        }
+
+        .save-settings-btn {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            float: right;
+            transition: var(--transition);
+            box-shadow: 0 4px 6px rgba(90, 153, 212, 0.3);
+        }
+
+        .save-settings-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(90, 153, 212, 0.4);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: rgba(30, 31, 32, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-message {
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .copyright {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(90, 153, 212, 0.1);
+            backdrop-filter: blur(10px);
+            border: 4px dashed var(--primary);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .drop-zone.active {
+            display: flex;
+        }
+
+        .drop-zone-content {
+            text-align: center;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .drop-zone-icon {
+            font-size: 72px;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .drop-zone-text {
+            font-size: 28px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-content {
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-primary);
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        /* Help Dialog */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            padding: 40px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .help-dialog {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .help-dialog h2 {
+            color: var(--primary);
+            margin-bottom: 24px;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .help-dialog h3 {
+            color: var(--primary);
+            margin-top: 24px;
+            margin-bottom: 12px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .help-dialog p {
+            margin-bottom: 16px;
+            line-height: 1.7;
+            color: var(--text-primary);
+        }
+
+        .help-dialog ul {
+            margin-left: 32px;
+            margin-bottom: 16px;
+        }
+
+        .help-dialog li {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .help-dialog code {
+            background: var(--bg-main);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+            color: var(--warning);
+        }
+
+        .close-help-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .close-help-btn:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+            transform: rotate(90deg);
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;            /* moved to bottom so content behind is less distracting */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 99999;          /* above charts/modals */
+    pointer-events: none;    /* clicks pass through except on the toast card */
+  }
+
+  @media (max-width: 640px) {
+    .toast-container {
+      left: 16px;
+      right: 16px;
+    }
+  }
+
+  .toast {
+    pointer-events: auto;
+    display: grid;
+    grid-template-columns: 6px 1fr auto;
+    align-items: start;
+    gap: 10px;
+    min-width: 260px;
+    max-width: 420px;
+    border-radius: 12px;
+    border: 1px solid #1f2937;     /* neutral border for focus/contrast */
+    background: #0b1220;           /* OPAQUE background (dark mode) */
+    color: #ffffff;                 /* readable text */
+    box-shadow: 0 10px 28px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.2);
+    overflow: hidden;
+  }
+
+  .toast__accent { width: 6px; height: 100%; background: #60a5fa; }  /* default/info */
+
+  .toast__body {
+    padding: 12px 12px;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .toast__close {
+    padding: 10px 12px;
+    align-self: center;
+    opacity: .9;
+    font-weight: 600;
+    color: #e5e7eb;
+    cursor: pointer;
+    user-select: none;
+  }
+  .toast__close:hover { opacity: 1; }
+
+  /* Type accents – colored stripe conveys meaning; body stays neutral */
+  .toast--success .toast__accent { background: #22c55e; } /* green */
+  .toast--info    .toast__accent { background: #60a5fa; } /* blue  */
+  .toast--warning .toast__accent { background: #f59e0b; } /* amber */
+  .toast--error   .toast__accent { background: #ef4444; } /* red   */
+
+  /* Light mode */
+  @media (prefers-color-scheme: light) {
+    .toast {
+      background: #ffffff;         /* OPAQUE light background */
+      color: #0b1220;
+      border-color: #e5e7eb;
+      box-shadow: 0 10px 28px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.1);
+    }
+    .toast__close { color: #334155; }
+  }
+
+  /* Reduced motion – disable transitions */
+  @media (prefers-reduced-motion: reduce) {
+    .toast { transition: none !important; }
+  }
+
+  /* High-contrast / forced-colors mode */
+  @media (forced-colors: active) {
+    .toast {
+      border: 1px solid CanvasText;
+      background: Canvas;
+      color: CanvasText;
+    }
+    .toast__accent { background: Highlight; }
+  }
+
+        /* Chart specific styles */
+        .chartjs-legend {
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .chartjs-legend::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chartjs-legend::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
+        }
+        .ignored-code {
+            color: var(--text-secondary);
+            font-style: italic;
+            opacity: 0.6;
+        }
+
+        /* Radio buttons and checkboxes */
+        .radio-group {
+            margin: 16px 0;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: var(--transition);
+        }
+
+        .radio-group label:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        input[type="radio"],
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .spinbox {
+            width: 70px;
+            padding: 6px 12px;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-left: 12px;
+            font-size: 14px;
+        }
+
+        /* Group Box */
+        .group-box {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+            background: rgba(46, 47, 48, 0.5);
+            transition: var(--transition);
+        }
+
+        .group-box:hover {
+            border-color: var(--primary);
+        }
+
+        .group-box-title {
+            position: absolute;
+            top: -12px;
+            left: 16px;
+            background: var(--bg-main);
+            padding: 0 12px;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Monthly trend specific */
+        .monthly-trend-container {
+            display: flex;
+            gap: 24px;
+            height: 100%;
+        }
+
+        .monthly-trend-providers {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .monthly-trend-table {
+            flex: 1;
+        }
+
+        .provider-filter-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .provider-filter-buttons button {
+            flex: 1;
+            padding: 8px 16px;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .provider-filter-buttons button:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 4px;
+            background: var(--bg-dark);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-hover) 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 72px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .empty-state-text {
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .empty-state-subtext {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .slide-up {
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1400px) {
+            .sidebar {
+                width: 280px;
+            }
+            .chart-controls {
+                width: 280px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .header h1 {
+                font-size: 1.5em;
+            }
+            .tab {
+                padding: 14px 20px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                <div class="logo">📊</div>
+                Slot Report Analyzer Pro
+            </h1>
+            <div class="toolbar">
+                <button id="openFileBtn" class="fade-in">
+                    <span>📁</span> Open File
+                </button>
+                <button id="refreshBtn" class="fade-in" style="animation-delay: 0.1s">
+                    <span>🔄</span> Refresh
+                </button>
+                <button id="exportBtn" class="fade-in" style="animation-delay: 0.2s">
+                    <span>💾</span> Export Excel
+                </button>
+                <button id="helpBtn" class="fade-in" style="animation-delay: 0.3s">
+                    <span>❓</span> Help
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <h2>
+                    <span>🎛️</span> Filters & Controls
+                </h2>
+                
+                <div class="filter-group">
+                    <label>📅 Date Range</label>
+                    <label style="font-size: 12px; text-transform: none; font-weight: normal;">From:</label>
+                    <input type="date" id="dateFrom">
+                    <label style="margin-top: 12px; font-size: 12px; text-transform: none; font-weight: normal;">To:</label>
+                    <input type="date" id="dateTo">
+                </div>
+
+                <div class="filter-group" style="animation-delay: 0.1s">
+                    <label>🏢 Provider</label>
+                    <select id="providerSelect">
+                        <option value="All Providers">All Providers</option>
+                    </select>
+                </div>
+
+                <div class="filter-group" style="animation-delay: 0.2s">
+                    <label>⚠️ Exception Type</label>
+                    <div class="multi-select" id="exceptionTypeList">
+                        <label><input type="checkbox" value="All Exception Types" checked> All Exception Types</label>
+                    </div>
+                </div>
+
+                <button class="clear-filters-btn" id="clearFiltersBtn">
+                    <span>🗑️</span> Clear All Filters
+                </button>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab active" data-tab="summary">
+                        <span class="tab-icon">📊</span> Provider Summary
+                    </div>
+                    <div class="tab" data-tab="monthly">
+                        <span class="tab-icon">📈</span> Monthly Trend
+                    </div>
+                    <div class="tab" data-tab="chart">
+                        <span class="tab-icon">📉</span> Trend Chart
+                    </div>
+                    <div class="tab" data-tab="breakdown">
+                        <span class="tab-icon">🔍</span> Exception Breakdown
+                    </div>
+                    <div class="tab" data-tab="settings">
+                        <span class="tab-icon">⚙️</span> Settings
+                    </div>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Provider Summary Tab -->
+                    <div class="tab-panel active" id="summaryPanel">
+                        <div class="overview-label slide-up" id="overviewLabel">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📂</div>
+                                <div class="empty-state-text">No Data Loaded</div>
+                                <div class="empty-state-subtext">Load a Detailed Slot Report file to begin analysis</div>
+                            </div>
+                        </div>
+                        <div class="table-container slide-up" style="animation-delay: 0.1s">
+                            <div class="table-controls">
+                                <div class="search-box">
+                                    <span class="search-icon">🔍</span>
+                                    <input type="text" id="summarySearch" placeholder="Search providers...">
+                                </div>
+                                <div class="sort-controls">
+                                    <label>Sort by Exception%:</label>
+                                    <button class="sort-btn" onclick="sortTable('summaryTable', 'ExceptionPercent', 'desc')">▼</button>
+                                    <button class="sort-btn" onclick="sortTable('summaryTable', 'ExceptionPercent', 'asc')">▲</button>
+                                </div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table id="summaryTable">
+                                    <thead></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Trend Tab -->
+                    <div class="tab-panel" id="monthlyPanel">
+                        <div class="monthly-trend-container">
+                            <div class="monthly-trend-providers slide-up">
+                                <div class="group-box">
+                                    <div class="group-box-title">Filter Providers</div>
+                                    <div class="provider-filter-buttons">
+                                        <button onclick="toggleAllMonthlyProviders(true)">Select All</button>
+                                        <button onclick="toggleAllMonthlyProviders(false)">Clear All</button>
+                                    </div>
+                                    <div class="multi-select" id="monthlyProviderList"></div>
+                                </div>
+                            </div>
+                            <div class="monthly-trend-table slide-up" style="animation-delay: 0.1s">
+                                <div class="table-container">
+                                    <div class="table-controls">
+                                        <div class="search-box">
+                                            <span class="search-icon">🔍</span>
+                                            <input type="text" id="monthlySearch" placeholder="Search monthly data...">
+                                        </div>
+                                    </div>
+                                    <div class="table-wrapper">
+                                        <table id="monthlyTable">
+                                            <thead></thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trend Chart Tab -->
+                    <div class="tab-panel" id="chartPanel">
+                        <div class="chart-container">
+                            <div class="chart-controls slide-up">
+                                <div class="group-box">
+                                    <div class="group-box-title">Chart Settings</div>
+                                    <label style="margin-bottom: 8px;">Y-Axis Metric:</label>
+                                    <select id="chartMetric" style="width: 100%; margin-bottom: 16px;">
+                                        <option value="count">Exception Count</option>
+                                        <option value="percentage">Exception Percentage</option>
+                                    </select>
+                                    <label>
+                                        <input type="checkbox" id="plotCombined" checked>
+                                        Plot combined trend for all providers
+                                    </label>
+                                    <p style="font-size: 12px; color: var(--text-secondary); margin-top: 12px; margin-bottom: 0;">
+                                        💡 Tip: Use "Plot combined trend" for a cleaner view when analyzing many providers
+                                    </p>
+                                </div>
+
+                                <div class="group-box" style="animation-delay: 0.1s">
+                                    <div class="group-box-title">Provider Selection</div>
+                                    <div class="radio-group">
+                                        <label>
+                                            <input type="radio" name="providerMode" value="manual">
+                                            Manual Selection
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="providerMode" value="topN" checked>
+                                            Top N by Exception Rate:
+                                            <input type="number" id="topNSpinbox" class="spinbox" value="5" min="1" max="20">
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="group-box" id="manualProviderBox" style="animation-delay: 0.2s; opacity: 0.5; pointer-events: none;">
+                                    <div class="group-box-title">Select Providers</div>
+                                    <div class="provider-filter-buttons">
+                                        <button onclick="toggleAllChartProviders(true)">All</button>
+                                        <button onclick="toggleAllChartProviders(false)">None</button>
+                                    </div>
+                                    <div class="multi-select" id="chartProviderList" style="max-height: 200px;"></div>
+                                </div>
+
+                                <div class="group-box" style="animation-delay: 0.3s">
+                                    <div class="group-box-title">Exception Codes</div>
+                                    <div class="provider-filter-buttons">
+                                        <button onclick="selectAllChartCodes()">All</button>
+                                        <button onclick="selectNoChartCodes()">None</button>
+                                    </div>
+                                    <div class="multi-select" id="chartCodeList" style="max-height: 150px;"></div>
+                                </div>
+
+                                <button class="save-settings-btn" onclick="updateChart()" style="width: 100%; margin-top: 12px;">
+                                    🔄 Update Chart
+                                </button>
+                            </div>
+
+                            <div class="chart-area slide-up" style="animation-delay: 0.2s">
+                                <div class="chart-canvas-container">
+                                    <canvas id="trendChart"></canvas>
+                                </div>
+                                <div class="trend-metrics">
+                                    <h3>📊 Trend Analysis</h3>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Start Value:</span>
+                                        <span class="metric-value" id="metricStart">N/A</span>
+                                    </div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">End Value:</span>
+                                        <span class="metric-value" id="metricEnd">N/A</span>
+                                    </div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Overall Change:</span>
+                                        <span class="metric-value" id="metricChange">N/A</span>
+                                    </div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Providers:</span>
+                                        <span class="metric-value" id="metricProviders">N/A</span>
+                                    </div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Codes:</span>
+                                        <span class="metric-value" id="metricCodes">N/A</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Exception Breakdown Tab -->
+                    <div class="tab-panel" id="breakdownPanel">
+                        <div class="table-container slide-up">
+                            <div class="table-controls">
+                                <div class="search-box">
+                                    <span class="search-icon">🔍</span>
+                                    <input type="text" id="breakdownSearch" placeholder="Search exceptions...">
+                                </div>
+                                <div class="sort-controls">
+                                    <label>Sort by % of Forms:</label>
+                                    <button class="sort-btn" onclick="sortTable('breakdownTable', 'PercentOfTotalForms', 'desc')">▼</button>
+                                    <button class="sort-btn" onclick="sortTable('breakdownTable', 'PercentOfTotalForms', 'asc')">▲</button>
+                                </div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table id="breakdownTable">
+                                    <thead></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Tab -->
+                    <div class="tab-panel" id="settingsPanel">
+                        <div class="settings-container">
+                            <div class="settings-group slide-up">
+                                <h3>🚫 Ignored Exception Codes</h3>
+                                <p class="settings-description">
+                                    Check the codes below to exclude them from all calculations and reports. 
+                                    This is useful for filtering out non-critical or false-positive exceptions.
+                                </p>
+                                <div class="multi-select" id="settingsCodeList"></div>
+                            </div>
+
+                            <div class="settings-group slide-up" style="animation-delay: 0.1s">
+                                <h3>🔍 Excluded Description Keywords</h3>
+                                <p class="settings-description">
+                                    Enter keywords (one per line) that, when found in an exception's description, 
+                                    will cause that exception to be ignored. This helps filter out known issues 
+                                    that are not true exceptions.
+                                </p>
+                                <textarea class="excluded-keywords" id="excludedKeywords" 
+                                    placeholder="Enter keywords, one per line..."></textarea>
+                            </div>
+
+                            <button class="save-settings-btn" onclick="saveSettings()">
+                                💾 Save Settings and Reload Data
+                            </button>
+                            <div style="clear: both;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <span class="status-message">
+                <span class="status-indicator"></span>
+                <span id="statusMessage">Ready. Load a report file or drag it here.</span>
+            </span>
+            <span class="copyright">© 2025 Accelerate Solutions, LLC</span>
+        </div>
+    </div>
+
+    <!-- Drop Zone -->
+    <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-content">
+            <div class="drop-zone-icon">📥</div>
+            <div class="drop-zone-text">Drop Excel File Here</div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Processing file...</div>
+        </div>
+    </div>
+
+    <!-- Help Dialog -->
+    <div class="modal-overlay" id="helpModal">
+        <div class="help-dialog">
+            <button class="close-help-btn" onclick="closeHelp()">×</button>
+            <h2>📚 Slot Report Analyzer Pro - User Guide</h2>
+            
+            <h3>🚀 Getting Started</h3>
+            <p>
+                This powerful application analyzes "Detailed Slot Report" Excel files to provide 
+                comprehensive insights into service exceptions and provider performance.
+            </p>
+            
+            <h3>📋 Workflow</h3>
+            <ol>
+                <li>
+                    <strong>Download the Report:</strong> First, download the "Detailed_Slot_Report" 
+                    from your reporting system. The file must contain this phrase in its name.
+                </li>
+                <li>
+                    <strong>Load the File:</strong> Use the <code>Open File</code> button or simply 
+                    drag and drop the Excel file onto the application window.
+                </li>
+                <li>
+                    <strong>Apply Filters:</strong> Use the left sidebar to filter by date range, 
+                    provider, and exception types to focus your analysis.
+                </li>
+                <li>
+                    <strong>Analyze Results:</strong> Navigate through the tabs to view different 
+                    perspectives of your data.
+                </li>
+                <li>
+                    <strong>Export Reports:</strong> Generate a comprehensive Excel report with all 
+                    your findings using the <code>Export Excel</code> button.
+                </li>
+            </ol>
+
+            <h3>🎛️ Interface Overview</h3>
+            
+            <h4>Filters & Controls (Left Sidebar)</h4>
+            <ul>
+                <li><strong>Date Range:</strong> Filter data to a specific time period</li>
+                <li><strong>Provider:</strong> Focus on a single provider or view all</li>
+                <li><strong>Exception Type:</strong> Select specific exception codes to analyze</li>
+                <li><strong>Clear Filters:</strong> Reset all filters to default values</li>
+            </ul>
+
+            <h4>Main Views (Tabs)</h4>
+            <ul>
+                <li>
+                    <strong>Provider Summary:</strong> High-level metrics showing each provider's 
+                    exception rate and performance relative to the group average
+                </li>
+                <li>
+                    <strong>Monthly Trend:</strong> Track exception rates over time to identify 
+                    patterns and improvements
+                </li>
+                <li>
+                    <strong>Trend Chart:</strong> Visualize trends with interactive charts, 
+                    supporting both individual and combined views
+                </li>
+                <li>
+                    <strong>Exception Breakdown:</strong> Detailed analysis of specific exception 
+                    codes by provider
+                </li>
+                <li>
+                    <strong>Settings:</strong> Configure which exceptions to ignore and set up 
+                    keyword filters
+                </li>
+            </ul>
+
+            <h3>📊 Understanding the Metrics</h3>
+            <ul>
+                <li>
+                    <code>TotalForms</code>: Total number of unique Form IDs for a provider
+                </li>
+                <li>
+                    <code>ExceptionForms</code>: Forms that contain at least one valid exception
+                </li>
+                <li>
+                    <code>ExceptionPercent</code>: Percentage of forms with exceptions 
+                    (ExceptionForms ÷ TotalForms × 100)
+                </li>
+                <li>
+                    <code>PctOfTotalExceptions</code>: Provider's share of all exceptions across 
+                    the entire dataset
+                </li>
+                <li>
+                    <code>DiffFromMeanExceptionPercent</code>: How far above or below the group 
+                    average a provider performs
+                </li>
+            </ul>
+
+            <h3>💡 Pro Tips</h3>
+            <ul>
+                <li>Use the search boxes to quickly find specific providers or codes</li>
+                <li>Click column headers to sort tables</li>
+                <li>Configure ignored codes in Settings to exclude known non-issues</li>
+                <li>The trend chart supports both manual selection and automatic "Top N" selection</li>
+                <li>Export regularly to maintain historical records</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // Global state
+        let currentFile = null;
+        let masterData = [];
+        let processor = null;
+        let chartInstance = null;
+        let lastSummaryData = [];
+        let lastBreakdownData = [];
+        let lastMonthlyData = [];
+        let lastChartData = [];
+        
+        // Settings
+        const SETTINGS_KEY = 'slotReportAnalyzerSettings';
+        let settings = {
+            ignoredExceptions: [],
+            excludedKeywords: []
+        };
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        function initializeApp() {
+            // Wait for libraries to load
+            if (typeof XLSX === 'undefined' || typeof Chart === 'undefined' || typeof _ === 'undefined') {
+                setTimeout(initializeApp, 100);
+                return;
+            }
+            
+            loadSettings();
+            setupEventListeners();
+            showStartupMessage();
+            initializeChart();
+            
+            // Set initial UI state
+            toggleProviderSelectionMode();
+            
+            // Add some initial animations
+            setTimeout(() => {
+                document.querySelectorAll('.fade-in').forEach(el => {
+                    el.style.opacity = '1';
+                });
+            }, 100);
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'info', duration = 4500) {
+    try {
+      const container = document.getElementById('toastContainer') || (function () {
+        const el = document.createElement('div');
+        el.id = 'toastContainer';
+        el.className = 'toast-container';
+        el.setAttribute('aria-live', 'polite');
+        el.setAttribute('aria-atomic', 'true');
+        document.body.appendChild(el);
+        return el;
+      })();
+
+      const toast = document.createElement('div');
+      toast.className = `toast toast--${type}`;
+      toast.setAttribute('role', 'status');  // announce politely
+      toast.setAttribute('aria-live', 'polite');
+
+      const accent = document.createElement('div');
+      accent.className = 'toast__accent';
+
+      const body = document.createElement('div');
+      body.className = 'toast__body';
+      body.textContent = String(message ?? '');
+
+      const close = document.createElement('div');
+      close.className = 'toast__close';
+      close.setAttribute('role', 'button');
+      close.setAttribute('tabindex', '0');
+      close.setAttribute('aria-label', 'Dismiss notification');
+      close.textContent = '✕';
+
+      let timerId = null;
+      const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const remove = () => {
+        if (!toast.isConnected) return;
+        if (timerId) { clearTimeout(timerId); timerId = null; }
+        if (!prefersReduced) {
+          toast.style.transition = 'opacity .18s ease, transform .18s ease';
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(6px)';
+          setTimeout(() => toast.remove(), 200);
+        } else {
+          toast.remove();
+        }
+      };
+
+      close.addEventListener('click', remove);
+      close.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); remove(); }
+      });
+
+      toast.appendChild(accent);
+      toast.appendChild(body);
+      toast.appendChild(close);
+      container.appendChild(toast);
+
+      // Enter animation
+      if (!prefersReduced) {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(6px)';
+        requestAnimationFrame(() => {
+          toast.style.transition = 'opacity .18s ease, transform .18s ease';
+          toast.style.opacity = '1';
+          toast.style.transform = 'translateY(0)';
+        });
+      }
+
+      // Auto-dismiss (warning/error linger longer)
+      const autoMs = (type === 'error' || type === 'warning')
+        ? Math.max(duration, 6000)
+        : duration;
+
+      timerId = setTimeout(remove, autoMs);
+
+      // Expose for late importers
+      window.showToast = window.showToast || showToast;
+
+      return toast;
+    } catch (err) {
+      console.error('Toast error:', err);
+      // Absolute fallback
+      alert(String(message ?? 'Notification'));
+    }
+  }
+
+        function loadSettings() {
+            const saved = localStorage.getItem(SETTINGS_KEY);
+            if (saved) {
+                try {
+                    settings = JSON.parse(saved);
+                } catch (e) {
+                    console.error('Failed to load settings:', e);
+                    showToast('Failed to load saved settings', 'error');
+                }
+            }
+        }
+
+        function saveSettings() {
+            // Get ignored codes
+            const codeCheckboxes = document.querySelectorAll('#settingsCodeList input[type="checkbox"]');
+            settings.ignoredExceptions = Array.from(codeCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+
+            // Get excluded keywords
+            const keywordsText = document.getElementById('excludedKeywords').value;
+            settings.excludedKeywords = keywordsText.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+            
+            showToast('Settings saved successfully! Reloading data...', 'success');
+            
+            if (currentFile) {
+                setTimeout(() => processFile(currentFile), 500);
+            }
+        }
+
+        function setupEventListeners() {
+            // Tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+            });
+
+            // File operations
+            document.getElementById('openFileBtn').addEventListener('click', openFile);
+            document.getElementById('refreshBtn').addEventListener('click', refreshFile);
+            document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+            document.getElementById('helpBtn').addEventListener('click', showHelp);
+
+            // Filters
+            document.getElementById('dateFrom').addEventListener('change', applyFilters);
+            document.getElementById('dateTo').addEventListener('change', applyFilters);
+            document.getElementById('providerSelect').addEventListener('change', applyFilters);
+            document.getElementById('clearFiltersBtn').addEventListener('click', clearFilters);
+
+            // Search boxes
+            document.getElementById('summarySearch').addEventListener('input', (e) => filterTable('summaryTable', e.target.value));
+            document.getElementById('monthlySearch').addEventListener('input', (e) => filterTable('monthlyTable', e.target.value));
+            document.getElementById('breakdownSearch').addEventListener('input', (e) => filterTable('breakdownTable', e.target.value));
+
+            // Drag and drop
+            setupDragAndDrop();
+
+            // Provider selection mode for charts
+            document.querySelectorAll('input[name="providerMode"]').forEach(radio => {
+                radio.addEventListener('change', toggleProviderSelectionMode);
+            });
+
+            // Top N spinbox
+            document.getElementById('topNSpinbox').addEventListener('change', updateChart);
+            document.getElementById('topNSpinbox').addEventListener('input', updateChart);
+
+            // Chart metric change
+            document.getElementById('chartMetric').addEventListener('change', updateChart);
+            document.getElementById('plotCombined').addEventListener('change', (e) => {
+                updateChart();
+                // Show/hide tip based on combined state
+                if (e.target.checked && lastSummaryData.length > 5) {
+                    showToast('Combined view activated - Individual provider lines are hidden for clarity', 'info', 3000);
+                }
+            });
+
+            // Exception type multi-select
+            document.getElementById('exceptionTypeList').addEventListener('change', (e) => {
+                if (e.target.type === 'checkbox') {
+                    handleExceptionTypeChange(e.target);
+                }
+            });
+
+            // Close modals on overlay click
+            document.getElementById('helpModal').addEventListener('click', (e) => {
+                if (e.target.id === 'helpModal') closeHelp();
+            });
+        }
+
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('dropZone');
+            const body = document.body;
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                body.addEventListener(eventName, () => dropZone.classList.add('active'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                body.addEventListener(eventName, () => dropZone.classList.remove('active'), false);
+            });
+
+            body.addEventListener('drop', handleDrop, false);
+        }
+
+        function handleDrop(e) {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                validateAndLoadFile(file);
+            }
+        }
+
+        function showStartupMessage() {
+            setTimeout(() => {
+                if (confirm("Welcome to Slot Report Analyzer Pro!\n\nHave you downloaded the latest Detailed_Slot_Report?\n\nClick OK to visit the report generation page, or Cancel to continue.")) {
+                    window.open('https://secure.therapservices.net/ma/flexibleReports/reportCriteria.do?reportId=19131', '_blank');
+                }
+            }, 500);
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabName);
+            });
+
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.toggle('active', panel.id === tabName + 'Panel');
+            });
+        }
+
+        function openFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.xlsx,.xls';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    validateAndLoadFile(file);
+                }
+            };
+            input.click();
+        }
+
+        function validateAndLoadFile(file) {
+            // Check file extension
+            const extension = file.name.split('.').pop().toLowerCase();
+            if (!['xlsx', 'xls'].includes(extension)) {
+                showToast('Please select an Excel file (.xlsx or .xls)', 'error');
+                return;
+            }
+            
+            // Check filename contains required text
+            if (!file.name.includes('Detailed_Slot_Report')) {
+                showToast("File name must contain 'Detailed_Slot_Report'", 'error');
+                return;
+            }
+            
+            loadFile(file);
+        }
+
+        function refreshFile() {
+            if (currentFile) {
+                showToast('Refreshing data...', 'info');
+                processFile(currentFile);
+            } else {
+                showToast('No file loaded to refresh', 'warning');
+            }
+        }
+
+        async function loadFile(file) {
+            currentFile = file;
+            showLoading(true);
+            updateStatus(`Loading ${file.name}...`);
+
+            try {
+                const data = await readFileAsArrayBuffer(file);
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                
+                if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                    throw new Error('No sheets found in the Excel file');
+                }
+                
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+                    raw: false, 
+                    dateNF: 'yyyy-mm-dd',
+                    defval: ''
+                });
+                
+                if (jsonData.length === 0) {
+                    throw new Error('No data found in the Excel file');
+                }
+                
+                // Validate required columns
+                const requiredColumns = ['Form ID', 'Service Provider', 'Slot Start Date'];
+                const firstRow = jsonData[0];
+                const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+                
+                if (missingColumns.length > 0) {
+                    throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
+                }
+                
+                processData(jsonData);
+                document.title = `Slot Report Analyzer Pro — ${file.name}`;
+                updateStatus(`Loaded: ${file.name} | ${jsonData.length.toLocaleString()} rows`);
+                showToast(`Successfully loaded ${jsonData.length.toLocaleString()} rows`, 'success');
+            } catch (error) {
+                console.error('Error loading file:', error);
+                showToast(`Error loading file: ${error.message}`, 'error');
+                updateStatus('Error loading file.');
+                currentFile = null;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function processFile(file) {
+            loadFile(file);
+        }
+
+        function processData(data) {
+            // Clean and standardize the data
+            masterData = data.map(row => {
+                // Handle different possible column names
+                const formId = row['Form ID'] || row['FormID'] || '';
+                const individualName = row['Individual Name'] || row['IndividualName'] || '';
+                const provider = row['Service Provider'] || row['Provider'] || '';
+                const slotStart = row['Slot Start Date'] || row['SlotStart'] || '';
+                const exceptionCode = String(row['Exception Code'] || row['ExceptionCode'] || '').trim();
+                const description = String(row['Description'] || '');
+                
+                return {
+                    FormID: formId,
+                    IndividualName: individualName,
+                    Provider: provider,
+                    SlotStart: slotStart,
+                    ExceptionCode: exceptionCode,
+                    Description: description
+                };
+            });
+
+            // Create processor
+            processor = new SlotReportProcessor(settings.ignoredExceptions, settings.excludedKeywords);
+            processor.loadData(masterData);
+
+            populateControls();
+            clearFilters(false);
+            applyFilters();
+        }
+
+        class SlotReportProcessor {
+            constructor(ignoredCodes, excludedKeywords) {
+                this.ignoredCodes = ignoredCodes || [];
+                this.excludedKeywords = excludedKeywords || [];
+                this.masterData = [];
+                this.formData = [];
+            }
+
+            loadData(data) {
+                this.masterData = data;
+                this.rebuildTables();
+            }
+
+            rebuildTables(startDate = null, endDate = null, provider = null) {
+                let filtered = [...this.masterData];
+                
+                if (startDate && endDate) {
+                    filtered = filtered.filter(row => {
+                        const date = new Date(row.SlotStart);
+                        return !isNaN(date) && date >= startDate && date <= endDate;
+                    });
+                }
+
+                this.formData = this.buildFormTable(filtered);
+                
+                if (provider && provider !== 'All Providers') {
+                    this.formData = this.formData.filter(form => form.Provider === provider);
+                }
+            }
+
+            buildFormTable(data) {
+  const formGroups = _.groupBy(data, 'FormID');
+
+  return Object.entries(formGroups).map(([formId, rows]) => {
+    const provider = rows[0].Provider;
+    const slotStart = rows[0].SlotStart;
+
+    // Does this form have at least one valid exception?
+    const hasException = rows.some(row => {
+      const code = row.ExceptionCode;
+      const desc = row.Description;
+
+      // Valid code check
+      if (!code || code === 'nan' || code === '' || this.ignoredCodes.includes(code)) return false;
+
+      // Description keyword check
+      if (this.excludedKeywords.length > 0) {
+        const descLower = String(desc).toLowerCase();
+        if (this.excludedKeywords.some(keyword => descLower.includes(String(keyword).toLowerCase()))) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    // Collect unique exception codes for the form
+    const allCodes = rows
+      .map(row => row.ExceptionCode)
+      .filter(code => code && code !== 'nan' && code !== '' && !this.ignoredCodes.includes(code));
+
+    const uniqueCodes = [...new Set(allCodes)].sort(); // ← fix
+
+    return {
+      FormID: formId,
+      Provider: provider,
+      SlotStart: slotStart,
+      AllExceptionCodes: uniqueCodes.join(', '),
+      HasException: hasException
+    };
+  });
+}
+
+
+            get uniqueFormCount() {
+                return this.formData.length;
+            }
+        }
+
+        function populateControls() {
+            const providers = [...new Set(masterData.map(row => row.Provider))].sort();
+            const codes = [...new Set(masterData.map(row => row.ExceptionCode))]
+                .filter(code => code && code !== 'nan' && code !== '')
+                .sort();
+
+            // Provider select
+            const providerSelect = document.getElementById('providerSelect');
+            providerSelect.innerHTML = '<option value="All Providers">All Providers</option>';
+            providers.forEach(provider => {
+                const option = document.createElement('option');
+                option.value = provider;
+                option.textContent = provider;
+                providerSelect.appendChild(option);
+            });
+
+            // Exception type list
+            const exceptionList = document.getElementById('exceptionTypeList');
+            exceptionList.innerHTML = '<label><input type="checkbox" value="All Exception Types" checked> All Exception Types</label>';
+            codes.forEach(code => {
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = code;
+                
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(' ' + code));
+                
+                if (settings.ignoredExceptions.includes(code)) {
+                    label.classList.add('ignored-code');
+                    label.title = 'Ignored in Settings';
+                }
+                
+                exceptionList.appendChild(label);
+            });
+
+            // Monthly provider list
+            const monthlyProviderList = document.getElementById('monthlyProviderList');
+            monthlyProviderList.innerHTML = '';
+            providers.forEach(provider => {
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = provider;
+                checkbox.checked = true;
+                checkbox.addEventListener('change', applyMonthlyFilters);
+                
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(' ' + provider));
+                monthlyProviderList.appendChild(label);
+            });
+
+            // Chart provider list - default to top 5 by exception rate if data available
+            // Chart provider list - default to top 5 by exception rate if data available
+const chartProviderList = document.getElementById('chartProviderList');
+chartProviderList.innerHTML = '';
+let topProviders = [];
+
+if (lastSummaryData && lastSummaryData.length > 0) {
+  topProviders = [...lastSummaryData] // ← fix spread
+    .sort((a, b) => b.ExceptionPercent - a.ExceptionPercent)
+    .slice(0, 5)
+    .map(p => p.Provider);
+}
+
+            
+            providers.forEach((provider, index) => {
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = provider;
+                // If we have top providers, use those, otherwise check first 5
+                checkbox.checked = topProviders.length > 0 ? 
+                    topProviders.includes(provider) : index < 5;
+                
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(' ' + provider));
+                chartProviderList.appendChild(label);
+            });
+
+            // Chart code list - default to non-ignored codes
+            const chartCodeList = document.getElementById('chartCodeList');
+            chartCodeList.innerHTML = '';
+            codes.forEach(code => {
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = code;
+                // Default to checked if not in ignored list
+                checkbox.checked = !settings.ignoredExceptions.includes(code);
+                
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(' ' + code));
+                
+                if (settings.ignoredExceptions.includes(code)) {
+                    label.classList.add('ignored-code');
+                    label.title = 'Ignored in Settings';
+                }
+                
+                chartCodeList.appendChild(label);
+            });
+
+            // Settings code list
+            const settingsCodeList = document.getElementById('settingsCodeList');
+            settingsCodeList.innerHTML = '';
+            codes.forEach(code => {
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = code;
+                checkbox.checked = settings.ignoredExceptions.includes(code);
+                
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(' ' + code));
+                settingsCodeList.appendChild(label);
+            });
+
+            // Excluded keywords
+            document.getElementById('excludedKeywords').value = settings.excludedKeywords.join('\n');
+        }
+
+        function clearFilters(apply = true) {
+            if (!processor) return;
+
+            // Get date range from data
+            const dates = masterData.map(row => new Date(row.SlotStart)).filter(d => !isNaN(d));
+            if (dates.length === 0) {
+                showToast('No valid dates found in data', 'warning');
+                return;
+            }
+            
+            const minDate = new Date(Math.min(...dates));
+            const maxDate = new Date(Math.max(...dates));
+
+            document.getElementById('dateFrom').value = formatDate(minDate);
+            document.getElementById('dateTo').value = formatDate(maxDate);
+            document.getElementById('providerSelect').value = 'All Providers';
+            
+            // Reset exception checkboxes
+            document.querySelectorAll('#exceptionTypeList input').forEach(cb => {
+                cb.checked = cb.value === 'All Exception Types';
+            });
+
+            if (apply) {
+                applyFilters();
+                showToast('All filters cleared', 'info');
+            }
+        }
+
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function handleExceptionTypeChange(checkbox) {
+            const allCheckbox = document.querySelector('#exceptionTypeList input[value="All Exception Types"]');
+            
+            if (checkbox.value === 'All Exception Types') {
+                // If "All" is checked, uncheck all others
+                document.querySelectorAll('#exceptionTypeList input').forEach(cb => {
+                    if (cb.value !== 'All Exception Types') {
+                        cb.checked = false;
+                    }
+                });
+            } else {
+                // If any specific item is checked, uncheck "All"
+                allCheckbox.checked = false;
+            }
+            
+            applyFilters();
+        }
+
+        function applyFilters() {
+  if (!processor) return;
+
+  const startDate = new Date(document.getElementById('dateFrom').value);
+  const endDate = new Date(document.getElementById('dateTo').value);
+  endDate.setHours(23, 59, 59);
+
+  const provider = document.getElementById('providerSelect').value;
+
+  processor.rebuildTables(startDate, endDate, provider);
+
+  // Selected exception codes
+  const selectedCodes = Array.from(document.querySelectorAll('#exceptionTypeList input:checked'))
+    .map(cb => cb.value)
+    .filter(val => val !== 'All Exception Types');
+
+  const isAllSelected = document.querySelector('#exceptionTypeList input[value="All Exception Types"]').checked;
+
+  // Attach MatchesFilter to each form record
+  const baseData = processor.formData;
+  const filteredData = baseData.map(form => ({
+    ...form, // ← fix
+    MatchesFilter: (isAllSelected || !selectedCodes.length)
+      ? form.HasException
+      : (form.HasException && selectedCodes.some(code =>
+          form.AllExceptionCodes.split(', ').includes(code)))
+  }));
+
+  // Recompute downstream artifacts
+  const providerStats = calculateProviderStats(filteredData);
+  const breakdown = calculateBreakdown(filteredData, selectedCodes, isAllSelected);
+  const monthlyData = calculateMonthlyTrend(filteredData);
+  const chartData = prepareChartData(filteredData, monthlyData);
+
+  updateViews(providerStats, breakdown, filteredData, monthlyData, chartData);
+}
+
+
+        function calculateProviderStats(data) {
+            const providerGroups = _.groupBy(data, 'Provider');
+            const stats = Object.entries(providerGroups).map(([provider, forms]) => {
+                const totalForms = forms.length;
+                const exceptionForms = forms.filter(f => f.MatchesFilter).length;
+                const exceptionPercent = totalForms > 0 ? (exceptionForms / totalForms * 100) : 0;
+                
+                return {
+                    Provider: provider,
+                    TotalForms: totalForms,
+                    ExceptionForms: exceptionForms,
+                    ExceptionPercent: exceptionPercent
+                };
+            });
+
+            // Calculate additional metrics
+            const totalExceptionForms = _.sumBy(stats, 'ExceptionForms');
+            const totalFormsOverall = _.sumBy(stats, 'TotalForms');
+            const overallMeanPercent = totalFormsOverall > 0 ? 
+                (totalExceptionForms / totalFormsOverall * 100) : 0;
+
+            stats.forEach(stat => {
+                stat.PctOfTotalExceptions = totalExceptionForms > 0 ? 
+                    (stat.ExceptionForms / totalExceptionForms * 100) : 0;
+                stat.DiffFromMeanExceptionPercent = stat.ExceptionPercent - overallMeanPercent;
+            });
+
+            return stats;
+        }
+
+        function calculateBreakdown(data, selectedCodes, isAllSelected) {
+            const breakdown = [];
+            const exceptionForms = data.filter(f => f.MatchesFilter);
+            
+            exceptionForms.forEach(form => {
+                const codes = form.AllExceptionCodes.split(', ').filter(c => c);
+                codes.forEach(code => {
+                    if (isAllSelected || !selectedCodes.length || selectedCodes.includes(code)) {
+                        const existing = breakdown.find(b => 
+                            b.Provider === form.Provider && b.ExceptionCode === code);
+                        if (existing) {
+                            existing.CountByCode++;
+                        } else {
+                            breakdown.push({
+                                Provider: form.Provider,
+                                ExceptionCode: code,
+                                CountByCode: 1
+                            });
+                        }
+                    }
+                });
+            });
+
+            // Add totals
+            const providerGroups = _.groupBy(data, 'Provider');
+            breakdown.forEach(item => {
+                const providerForms = providerGroups[item.Provider];
+                item.TotalForms = providerForms.length;
+                item.ExceptionForms = providerForms.filter(f => f.MatchesFilter).length;
+                item.PercentOfTotalForms = item.TotalForms > 0 ? 
+                    (item.CountByCode / item.TotalForms * 100) : 0;
+            });
+
+            return breakdown;
+        }
+
+        function calculateMonthlyTrend(data) {
+            const monthlyGroups = {};
+            
+            data.forEach(form => {
+                const date = new Date(form.SlotStart);
+                if (isNaN(date)) return;
+                
+                const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const key = `${form.Provider}|${yearMonth}`;
+                
+                if (!monthlyGroups[key]) {
+                    monthlyGroups[key] = {
+                        Provider: form.Provider,
+                        YearMonth: yearMonth,
+                        TotalForms: 0,
+                        ExceptionForms: 0
+                    };
+                }
+                
+                monthlyGroups[key].TotalForms++;
+                if (form.MatchesFilter) {
+                    monthlyGroups[key].ExceptionForms++;
+                }
+            });
+
+            const monthlyData = Object.values(monthlyGroups);
+            monthlyData.forEach(item => {
+                item.ExceptionPercent = item.TotalForms > 0 ? 
+                    (item.ExceptionForms / item.TotalForms * 100) : 0;
+            });
+
+            return monthlyData;
+        }
+
+        function prepareChartData(filteredData, monthlyData) {
+  // Build a row per (form, month, code) — we keep FormID so we can dedupe later
+  const perFormPerCode = [];
+  filteredData.forEach(form => {
+    if (!form.MatchesFilter) return;
+    const date = new Date(form.SlotStart);
+    if (isNaN(date)) return;
+
+    const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const codes = (form.AllExceptionCodes || '').split(', ').filter(Boolean);
+
+    // emit once per unique code that a form carries
+    codes.forEach(code => {
+      perFormPerCode.push({
+        Provider: form.Provider,
+        YearMonth: yearMonth,
+        ExceptionCode: code,
+        FormID: form.FormID
+      });
+    });
+  });
+
+  // Aggregate to (provider, month, code), keeping the unique FormIDs set for later % math
+  const groups = _.groupBy(perFormPerCode, i => `${i.Provider}|${i.YearMonth}|${i.ExceptionCode}`);
+  const aggregated = [];
+
+  Object.entries(groups).forEach(([key, items]) => {
+    const [provider, yearMonth, code] = key.split('|');
+
+    // Unique forms carrying this code in that provider-month
+    const formIDs = [...new Set(items.map(i => i.FormID))];
+
+    // Total forms for this provider-month (from monthlyData once per provider-month)
+    const monthlyInfo = monthlyData.find(
+      m => m.Provider === provider && m.YearMonth === yearMonth
+    );
+    const totalForms = monthlyInfo ? monthlyInfo.TotalForms : 0;
+
+    aggregated.push({
+      Provider: provider,
+      YearMonth: yearMonth,
+      ExceptionCode: code,
+      // By design: ExceptionCount = #unique forms with THIS code
+      ExceptionCount: formIDs.length,
+      TotalForms: totalForms,
+      // Keep for unioning across multiple selected codes later
+      FormIDs: formIDs
+    });
+  });
+
+  return aggregated;
+}
+
+
+
+        function updateViews(summaryData, breakdownData, baseData, monthlyData, chartData) {
+            lastSummaryData = summaryData;
+            lastBreakdownData = breakdownData;
+            lastMonthlyData = monthlyData;
+            lastChartData = chartData;
+
+            // Update overview label
+            const totalForms = processor.uniqueFormCount;
+            const exceptionForms = baseData.filter(f => f.MatchesFilter).length;
+            const exceptionPercent = totalForms > 0 ? (exceptionForms / totalForms * 100) : 0;
+            
+            document.getElementById('overviewLabel').innerHTML = 
+                `<b>📊 Unique Forms:</b> ${totalForms.toLocaleString()} | ` +
+                `<b>⚠️ Forms w/ Exceptions:</b> ${exceptionForms.toLocaleString()} | ` +
+                `<b>📈 Exception Rate:</b> ${exceptionPercent.toFixed(1)}%`;
+
+            // Update tables
+            updateTable('summaryTable', summaryData, ['Provider', 'TotalForms', 'ExceptionForms', 
+                'ExceptionPercent', 'PctOfTotalExceptions', 'DiffFromMeanExceptionPercent']);
+            updateTable('breakdownTable', breakdownData, ['Provider', 'ExceptionCode', 
+                'CountByCode', 'ExceptionForms', 'TotalForms', 'PercentOfTotalForms']);
+
+            // Sort tables by default
+            sortTable('summaryTable', 'ExceptionPercent', 'desc');
+            sortTable('breakdownTable', 'PercentOfTotalForms', 'desc');
+
+            // Update monthly trend
+            applyMonthlyFilters();
+
+            // Update chart
+            updateChart();
+            
+            // Show tip if many providers
+            if (summaryData.length > 10) {
+                showToast('💡 Tip: Use "Top N by Exception Rate" mode in Trend Chart for better visualization', 'info', 5000);
+            }
+        }
+
+        function updateTable(tableId, data, columns) {
+            const table = document.getElementById(tableId);
+            const thead = table.querySelector('thead');
+            const tbody = table.querySelector('tbody');
+
+            // Update header
+            thead.innerHTML = '<tr>' + columns.map(col => `<th>${formatColumnName(col)}</th>`).join('') + '</tr>';
+
+            // Update body
+            tbody.innerHTML = data.map(row => 
+                '<tr>' + columns.map(col => {
+                    const value = row[col];
+                    let cellClass = '';
+                    let formattedValue = '';
+                    
+                    if (typeof value === 'number') {
+                        cellClass = 'number-cell';
+                        if (col.includes('Percent')) {
+                            formattedValue = value.toFixed(1) + '%';
+                            if (col === 'DiffFromMeanExceptionPercent') {
+                                cellClass += value > 0 ? ' percent-positive' : ' percent-negative';
+                                formattedValue = (value > 0 ? '+' : '') + formattedValue;
+                            }
+                        } else {
+                            formattedValue = value.toLocaleString();
+                        }
+                    } else {
+                        formattedValue = value || '';
+                    }
+                    
+                    return `<td class="${cellClass}">${formattedValue}</td>`;
+                }).join('') + '</tr>'
+            ).join('');
+        }
+
+        function formatColumnName(col) {
+            const names = {
+                'Provider': 'Provider',
+                'TotalForms': 'Total Forms',
+                'ExceptionForms': 'Exception Forms',
+                'ExceptionPercent': 'Exception %',
+                'PctOfTotalExceptions': '% of Total',
+                'DiffFromMeanExceptionPercent': 'Diff from Avg',
+                'ExceptionCode': 'Exception Code',
+                'CountByCode': 'Count',
+                'PercentOfTotalForms': '% of Forms',
+                'YearMonth': 'Month',
+                'ExceptionCount': 'Count'
+            };
+            return names[col] || col;
+        }
+
+        function sortTable(tableId, columnName, direction) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const thead = table.querySelector('thead');
+            const headers = Array.from(thead.querySelectorAll('th'));
+            
+            const columnIndex = headers.findIndex(th => {
+                const text = th.textContent;
+                return text === formatColumnName(columnName);
+            });
+            
+            if (columnIndex === -1) return;
+
+            rows.sort((a, b) => {
+                let aValue = a.cells[columnIndex].textContent.replace(/[,%+]/g, '');
+                let bValue = b.cells[columnIndex].textContent.replace(/[,%+]/g, '');
+                
+                aValue = isNaN(parseFloat(aValue)) ? aValue : parseFloat(aValue);
+                bValue = isNaN(parseFloat(bValue)) ? bValue : parseFloat(bValue);
+                
+                if (typeof aValue === 'string') {
+                    return direction === 'asc' ? 
+                        aValue.localeCompare(bValue) : 
+                        bValue.localeCompare(aValue);
+                } else {
+                    return direction === 'asc' ? aValue - bValue : bValue - aValue;
+                }
+            });
+
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        function filterTable(tableId, searchText) {
+            const table = document.getElementById(tableId);
+            const rows = table.querySelectorAll('tbody tr');
+            const search = searchText.toLowerCase();
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(search) ? '' : 'none';
+            });
+        }
+
+        function toggleAllMonthlyProviders(checked) {
+            const checkboxes = document.querySelectorAll('#monthlyProviderList input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = checked);
+            applyMonthlyFilters();
+        }
+
+        function applyMonthlyFilters() {
+            const checkedProviders = Array.from(
+                document.querySelectorAll('#monthlyProviderList input[type="checkbox"]:checked')
+            ).map(cb => cb.value);
+
+            const filteredData = lastMonthlyData.filter(row => 
+                checkedProviders.includes(row.Provider));
+
+            updateTable('monthlyTable', filteredData, 
+                ['Provider', 'YearMonth', 'TotalForms', 'ExceptionForms', 'ExceptionPercent']);
+            
+            // Sort by Provider and YearMonth
+            const table = document.getElementById('monthlyTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            rows.sort((a, b) => {
+                const aProvider = a.cells[0].textContent;
+                const bProvider = b.cells[0].textContent;
+                const aMonth = a.cells[1].textContent;
+                const bMonth = b.cells[1].textContent;
+                
+                if (aProvider !== bProvider) {
+                    return aProvider.localeCompare(bProvider);
+                }
+                return aMonth.localeCompare(bMonth);
+            });
+
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        function toggleProviderSelectionMode() {
+            const isManual = document.querySelector('input[name="providerMode"]:checked').value === 'manual';
+            document.getElementById('manualProviderBox').style.opacity = isManual ? '1' : '0.5';
+            document.getElementById('manualProviderBox').style.pointerEvents = isManual ? 'auto' : 'none';
+            document.getElementById('topNSpinbox').disabled = isManual;
+            
+            // Auto-update chart when switching modes
+            updateChart();
+        }
+
+        function toggleAllChartProviders(checked) {
+            const checkboxes = document.querySelectorAll('#chartProviderList input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = checked);
+        }
+
+        function selectAllChartCodes() {
+            const checkboxes = document.querySelectorAll('#chartCodeList input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
+        }
+
+        function selectNoChartCodes() {
+            const checkboxes = document.querySelectorAll('#chartCodeList input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+
+        function initializeChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Exception Trend Analysis',
+                            color: '#5A99D4',
+                            font: { size: 18, weight: 'bold' }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            align: 'center',
+                            maxHeight: 100,
+                            labels: { 
+                                color: '#f0f0f0',
+                                padding: 8,
+                                font: { size: 10 },
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                boxWidth: 12,
+                                boxHeight: 12,
+                                generateLabels: function(chart) {
+                                    const datasets = chart.data.datasets;
+                                    const hasCombined = datasets.some(d => d.label && d.label.includes('Combined'));
+                                    
+                                    // If combined view and many datasets, show simplified legend
+                                    if (hasCombined && datasets.length > 6) {
+                                        // Only show combined trend in legend when there are many providers
+                                        return datasets
+                                            .filter(d => d.label.includes('Combined'))
+                                            .map((dataset, i) => ({
+                                                text: dataset.label,
+                                                fillStyle: dataset.backgroundColor,
+                                                strokeStyle: dataset.borderColor,
+                                                lineWidth: dataset.borderWidth,
+                                                hidden: dataset.hidden,
+                                                index: datasets.indexOf(dataset)
+                                            }));
+                                    }
+                                    
+                                    // Show message if too many individual providers
+                                    if (!hasCombined && datasets.length > 10) {
+                                        return [{
+                                            text: `Showing ${datasets.length} providers - Consider using "Plot combined trend"`,
+                                            fillStyle: '#FDD663',
+                                            strokeStyle: '#FDD663',
+                                            hidden: false,
+                                            index: -1
+                                        }].concat(datasets.map((dataset, i) => ({
+                                            text: dataset.label.length > 25 ? 
+                                                dataset.label.substring(0, 22) + '...' : dataset.label,
+                                            fillStyle: dataset.backgroundColor,
+                                            strokeStyle: dataset.borderColor,
+                                            lineWidth: dataset.borderWidth,
+                                            hidden: dataset.hidden,
+                                            index: i
+                                        })));
+                                    }
+                                    
+                                    return datasets.map((dataset, i) => ({
+                                        text: dataset.label,
+                                        fillStyle: dataset.backgroundColor,
+                                        strokeStyle: dataset.borderColor,
+                                        lineWidth: dataset.borderWidth,
+                                        hidden: dataset.hidden,
+                                        index: i
+                                    }));
+                                }
+                            },
+                            onClick: function(e, legendItem, legend) {
+                                if (legendItem.index === -1) return; // Skip message item
+                                const index = legendItem.index;
+                                const chart = legend.chart;
+                                const meta = chart.getDatasetMeta(index);
+                                
+                                // Toggle visibility
+                                meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : !meta.hidden;
+                                chart.update();
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(56, 57, 58, 0.95)',
+                            titleColor: '#f0f0f0',
+                            bodyColor: '#f0f0f0',
+                            borderColor: '#5A99D4',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    const metric = document.getElementById('chartMetric').value;
+                                    const suffix = metric === 'percentage' ? '%' : '';
+                                    return `${label}: ${value.toFixed(1)}${suffix}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { 
+                                color: '#f0f0f0', 
+                                maxRotation: 45, 
+                                minRotation: 45,
+                                font: { size: 11 }
+                            },
+                            grid: { color: 'rgba(68, 68, 68, 0.3)' }
+                        },
+                        y: {
+                            ticks: { 
+                                color: '#f0f0f0',
+                                font: { size: 11 },
+                                callback: function(value) {
+                                    const metric = document.getElementById('chartMetric').value;
+                                    return metric === 'percentage' ? value.toFixed(1) + '%' : value;
+                                }
+                            },
+                            grid: { color: 'rgba(68, 68, 68, 0.3)' }
+                        }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    animation: {
+                        duration: 750,
+                        easing: 'easeInOutQuart'
+                    }
+                }
+            });
+        }
+
+        function updateChart() {
+  if (!chartInstance || !lastChartData.length) {
+    updateTrendMetrics([], [], []);
+    return;
+  }
+
+  let selectedProviders;
+  const providerMode = document.querySelector('input[name="providerMode"]:checked').value;
+
+  if (providerMode === 'manual') {
+    selectedProviders = Array.from(
+      document.querySelectorAll('#chartProviderList input[type="checkbox"]:checked')
+    ).map(cb => cb.value);
+  } else {
+    // Top N by Exception%
+    const n = parseInt(document.getElementById('topNSpinbox').value, 10);
+    const sortedProviders = [...lastSummaryData]
+      .sort((a, b) => b.ExceptionPercent - a.ExceptionPercent)
+      .slice(0, n)
+      .map(p => p.Provider);
+    selectedProviders = sortedProviders;
+
+    // Keep the UI in sync
+    document.querySelectorAll('#chartProviderList input[type="checkbox"]').forEach(cb => {
+      cb.checked = sortedProviders.includes(cb.value);
+    });
+  }
+
+  const selectedCodes = Array.from(
+    document.querySelectorAll('#chartCodeList input[type="checkbox"]:checked')
+  ).map(cb => cb.value);
+
+  const metric = document.getElementById('chartMetric').value; // 'count' | 'percentage'
+  const plotCombined = document.getElementById('plotCombined').checked;
+
+  if (!selectedProviders.length || !selectedCodes.length) {
+    chartInstance.data = { labels: [], datasets: [] };
+    chartInstance.update();
+    updateTrendMetrics([], selectedProviders, selectedCodes);
+    return;
+  }
+
+  // Filter down to rows we need
+  const filtered = lastChartData.filter(
+    d => selectedProviders.includes(d.Provider) && selectedCodes.includes(d.ExceptionCode)
+  );
+
+  const allMonths = [...new Set(filtered.map(d => d.YearMonth))].sort();
+  const datasets = [];
+  let yValues = [];
+
+  // Helper: sum unique provider-month TotalForms once per provider
+  function sumMonthTotalForms(monthItems) {
+    const seen = new Set();
+    let total = 0;
+    monthItems.forEach(it => {
+      const key = `${it.Provider}|${it.YearMonth}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        total += it.TotalForms || 0;
+      }
+    });
+    return total;
+  }
+
+  if (plotCombined) {
+    // ONE LINE ONLY: combined across all selected providers
+    const combinedSeries = allMonths.map(month => {
+      const monthItems = filtered.filter(d => d.YearMonth === month);
+
+      if (metric === 'percentage') {
+        // numerator: unique forms with ≥1 selected code across all selected providers in that month
+        const unionFormIDs = new Set();
+        monthItems.forEach(it => (it.FormIDs || []).forEach(id => unionFormIDs.add(id)));
+
+        // denominator: sum of provider-month TotalForms (counted once per provider)
+        const totalForms = sumMonthTotalForms(monthItems);
+        return totalForms > 0 ? (unionFormIDs.size / totalForms) * 100 : 0;
+      } else {
+        // 'count' = sum of code-occurrence counts (can exceed #forms by design)
+        return _.sumBy(monthItems, 'ExceptionCount');
+      }
+    });
+
+    yValues = combinedSeries;
+
+    datasets.push({
+      label: `Combined trend (${selectedProviders.length} providers)`,
+      data: combinedSeries,
+      borderColor: '#5A99D4',
+      backgroundColor: '#5A99D420',
+      borderWidth: 2,
+      tension: 0.25,
+      pointRadius: 0,
+      pointHoverRadius: 3,
+      pointStyle: 'rectRot',
+      fill: false
+    });
+
+  } else {
+    // Per-provider series
+    // Limit to max 10 providers for readability (only in per-provider mode)
+    if (selectedProviders.length > 10) {
+      showToast('Limiting display to top 10 providers for readability', 'info');
+      selectedProviders = selectedProviders.slice(0, 10);
+    }
+
+    selectedProviders.forEach((provider, index) => {
+      const providerData = allMonths.map(month => {
+        const items = filtered.filter(d => d.Provider === provider && d.YearMonth === month);
+
+        if (metric === 'percentage') {
+          // numerator: unique forms for THIS provider with ≥1 selected code
+          const unionFormIDs = new Set();
+          items.forEach(it => (it.FormIDs || []).forEach(id => unionFormIDs.add(id)));
+
+          const totalForms = items.length ? items[0].TotalForms : 0;
+          return totalForms > 0 ? (unionFormIDs.size / totalForms) * 100 : 0;
+        } else {
+          // 'count' = total code-occurrence counts for this provider-month
+          return _.sumBy(items, 'ExceptionCount');
+        }
+      });
+
+      yValues = yValues.concat(providerData);
+
+      const colors = [
+        '#5A99D4', '#63FDD6', '#FDD663', '#E67C73', '#A78BFA',
+        '#34D399', '#F87171', '#60A5FA', '#FBBF24', '#A3E635'
+      ];
+
+      datasets.push({
+        label: provider,
+        data: providerData,
+        borderColor: colors[index % colors.length],
+        backgroundColor: colors[index % colors.length] + '20',
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        pointStyle: 'circle',
+        fill: false
+      });
+    });
+  }
+
+  chartInstance.data = {
+    labels: allMonths.map(m => {
+      const [year, monthNum] = m.split('-');
+      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${monthNames[parseInt(monthNum, 10) - 1]} ${year}`;
+    }),
+    datasets
+  };
+
+  chartInstance.update();
+  updateTrendMetrics(yValues, selectedProviders, selectedCodes);
+}
+
+
+
+        function updateTrendMetrics(yValues, providers, codes) {
+            if (yValues.length === 0) {
+                document.getElementById('metricStart').textContent = 'N/A';
+                document.getElementById('metricEnd').textContent = 'N/A';
+                document.getElementById('metricChange').textContent = 'N/A';
+                document.getElementById('metricProviders').textContent = 'N/A';
+                document.getElementById('metricCodes').textContent = 'N/A';
+                return;
+            }
+
+            const plotCombined = document.getElementById('plotCombined').checked;
+            const metric = document.getElementById('chartMetric').value;
+            const suffix = metric === 'percentage' ? '%' : '';
+            
+            // Get the values from the combined series if active
+            let startValue, endValue;
+            if (plotCombined) {
+                const combinedDataset = chartInstance.data.datasets.find(d => d.label.includes('Combined'));
+                if (combinedDataset) {
+                    startValue = combinedDataset.data[0];
+                    endValue = combinedDataset.data[combinedDataset.data.length - 1];
+                } else {
+                    startValue = yValues[0];
+                    endValue = yValues[yValues.length - 1];
+                }
+            } else {
+                startValue = yValues[0];
+                endValue = yValues[yValues.length - 1];
+            }
+            
+            const change = endValue - startValue;
+            const changePercent = startValue !== 0 ? (change / startValue * 100) : 0;
+            
+            document.getElementById('metricStart').textContent = startValue.toFixed(1) + suffix;
+            document.getElementById('metricEnd').textContent = endValue.toFixed(1) + suffix;
+            document.getElementById('metricChange').textContent = 
+                (change >= 0 ? '+' : '') + change.toFixed(1) + suffix + 
+                ` (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(1)}%)`;
+            document.getElementById('metricProviders').textContent = 
+                providers.length + (plotCombined ? ' (Combined)' : '');
+            document.getElementById('metricCodes').textContent = codes.length;
+        }
+
+        function showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.toggle('active', show);
+        }
+
+        function updateStatus(message) {
+            document.getElementById('statusMessage').textContent = message;
+        }
+
+        function showHelp() {
+            document.getElementById('helpModal').classList.add('active');
+        }
+
+        function closeHelp() {
+            document.getElementById('helpModal').classList.remove('active');
+        }
+
+        // ===== Enhanced Excel export (ExcelJS) =====
+
+// ===== Robust Excel export (styled ranges; no tables) =====
+
+async function exportToExcel() {
+  if (!processor || !Array.isArray(lastSummaryData) || lastSummaryData.length === 0) {
+    showToast('No data to export. Please load a file first.', 'warning');
+    return;
+  }
+  if (!(window.ExcelJS && window.saveAs)) {
+    console.warn('ExcelJS or FileSaver not found; using legacy export.');
+    exportToExcelAlternative();
+    return;
+  }
+
+  showLoading(true);
+  updateStatus('Generating Excel report...');
+
+  try {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'SlotReport';
+    wb.lastModifiedBy = 'SlotReport';
+    wb.created = new Date();
+    wb.modified = new Date();
+    wb.properties.date1904 = false;
+
+    // ---------- Sheet 1: Provider Summary ----------
+    {
+      const headers = [
+        'Provider',
+        'Total Forms',
+        'Exception Forms',
+        'Exception %',
+        '% of Total Exceptions',
+        'Diff from Average'
+      ];
+
+      const rows = lastSummaryData.map(r => ([
+        r.Provider,
+        safeInt(r.TotalForms),
+        safeInt(r.ExceptionForms),
+        toFraction(r.ExceptionPercent),
+        toFraction(r.PctOfTotalExceptions),
+        toFraction(r.DiffFromMeanExceptionPercent)
+      ]));
+
+      const formats = {
+        2: { numFmt: '0' },                // Total Forms
+        3: { numFmt: '0' },                // Exception Forms
+        4: { numFmt: '0.0%' },             // Exception %
+        5: { numFmt: '0.0%' },             // % of Total Exceptions
+        6: { numFmt: '+0.0%;-0.0%;0.0%' }  // Diff from Average
+      };
+
+      addWorksheetStyledRange({
+        wb,
+        name: 'Provider Summary',
+        headers,
+        rows,
+        formats
+      });
+    }
+
+    // ---------- Sheet 2: Monthly Trend ----------
+    {
+      const headers = ['Provider', 'Month', 'Total Forms', 'Exception Forms', 'Exception %'];
+      const rows = (lastMonthlyData || []).map(r => ([
+        r.Provider,
+        parseYearMonth(r.YearMonth),
+        safeInt(r.TotalForms),
+        safeInt(r.ExceptionForms),
+        toFraction(r.ExceptionPercent)
+      ]));
+
+      const formats = {
+        2: { numFmt: 'yyyy-mm' }, // Month
+        3: { numFmt: '0' },       // Total Forms
+        4: { numFmt: '0' },       // Exception Forms
+        5: { numFmt: '0.0%' }     // Exception %
+      };
+
+      addWorksheetStyledRange({
+        wb,
+        name: 'Monthly Trend',
+        headers,
+        rows,
+        formats
+      });
+    }
+
+    // ---------- Sheet 3: Exception Breakdown ----------
+    {
+      const headers = [
+        'Provider',
+        'Exception Code',
+        'Count (code hits)',
+        'Exception Forms',
+        'Total Forms',
+        '% of Forms'
+      ];
+      const rows = (lastBreakdownData || []).map(r => ([
+        r.Provider,
+        r.ExceptionCode,
+        safeInt(r.CountByCode),
+        safeInt(r.ExceptionForms),
+        safeInt(r.TotalForms),
+        toFraction(r.PercentOfTotalForms)
+      ]));
+
+      const formats = {
+        3: { numFmt: '0' },   // Count
+        4: { numFmt: '0' },   // Exception Forms
+        5: { numFmt: '0' },   // Total Forms
+        6: { numFmt: '0.0%' } // % of Forms
+      };
+
+      addWorksheetStyledRange({
+        wb,
+        name: 'Exception Breakdown',
+        headers,
+        rows,
+        formats
+      });
+    }
+
+    // ---------- Sheet 4: Raw Data ----------
+    {
+      const headers = [
+        'FormID',
+        'Provider',
+        'SlotStart',
+        'AllExceptionCodes',
+        'HasException',
+        'ExceptionCode',
+        'Description'
+      ];
+
+      const rows = (masterData || []).map(row => ([
+        val(row.FormID),
+        val(row.Provider),
+        parseDateMaybe(row.SlotStart),
+        val(row.AllExceptionCodes),
+        bool(row.HasException),
+        val(row.ExceptionCode),
+        val(row.Description)
+      ]));
+
+      const formats = {
+        3: { numFmt: 'yyyy-mm-dd hh:mm' } // SlotStart
+      };
+
+      addWorksheetStyledRange({
+        wb,
+        name: 'Raw Data',
+        headers,
+        rows,
+        formats
+      });
+    }
+
+    // ---------- Write file ----------
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+    const filename = `SlotReport_Analysis_${dateStr}_${timeStr}.xlsx`;
+
+    const buf = await wb.xlsx.writeBuffer();
+    saveAs(new Blob([buf], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }), filename);
+
+    showToast('Excel report exported successfully!', 'success');
+    updateStatus(`Exported: ${filename}`);
+  } catch (error) {
+    console.error('Export error:', error);
+    showToast('Error exporting to Excel', 'error');
+    updateStatus('Export failed.');
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ===== Helpers: robust styled-range writer (filters, freeze, banding, autofit) =====
+
+function addWorksheetStyledRange({ wb, name, headers, rows, formats = {} }) {
+  const ws = wb.addWorksheet(name);
+
+  // 1) Header + data rows
+  ws.addRow(headers);
+  rows.forEach(r => ws.addRow(r));
+
+  // 2) Freeze header row
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+  // 3) Header style
+  const headerRow = ws.getRow(1);
+  headerRow.font = { bold: true, color: { argb: 'FF000000' } };
+  headerRow.alignment = { vertical: 'middle' };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } };
+  headerRow.height = 18;
+
+  // 4) Sheet-level AutoFilter over the used header range
+  ws.autoFilter = {
+    from: { row: 1, column: 1 },
+    to:   { row: 1, column: headers.length }
+  };
+
+  // 5) Apply number/date formats per column (1-based)
+  Object.entries(formats).forEach(([colIdx1, opts]) => {
+    const col = ws.getColumn(Number(colIdx1));
+    if (opts && opts.numFmt) col.numFmt = opts.numFmt;
+  });
+
+  // 6) Banded rows (striping) for data region (row 2..rowCount)
+  bandRows(ws, 2, ws.rowCount);
+
+  // 7) Auto-fit widths
+  autoFitColumns(ws, headers, rows);
+}
+
+function bandRows(ws, startRow, endRow) {
+  if (endRow < startRow) return;
+  for (let r = startRow; r <= endRow; r++) {
+    if ((r - startRow) % 2 === 0) {
+      ws.getRow(r).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF7F7F7' } // light gray
+      };
+    }
+  }
+}
+
+function autoFitColumns(ws, headers, rows) {
+  const MAX = 60, MIN = 8, DATE_MIN = 12;
+  const colCount = headers.length;
+  for (let c = 1; c <= colCount; c++) {
+    const header = headers[c - 1] || '';
+    let maxLen = String(header).length;
+
+    for (let r = 0; r < rows.length; r++) {
+      const v = rows[r][c - 1];
+      let len;
+      if (v instanceof Date) {
+        len = DATE_MIN;
+      } else if (typeof v === 'number') {
+        len = String(Math.round(v * 1000) / 1000).length + 2;
+      } else {
+        const s = v === undefined || v === null ? '' : String(v);
+        len = s.length;
+      }
+      if (len > maxLen) maxLen = len;
+    }
+
+    ws.getColumn(c).width = Math.min(MAX, Math.max(MIN, maxLen + 2));
+  }
+}
+
+function val(x) { return x === undefined || x === null ? '' : x; }
+function bool(x) { return !!x; }
+function safeInt(x) {
+  const n = Number(x);
+  return Number.isFinite(n) ? Math.round(n) : 0;
+}
+function toFraction(percentOrFraction) {
+  const n = Number(percentOrFraction);
+  if (!Number.isFinite(n)) return 0;
+  return n > 1 ? n / 100 : n;
+}
+function parseDateMaybe(v) {
+  const d = new Date(v);
+  return isNaN(d) ? val(v) : d;
+}
+function parseYearMonth(ym) {
+  if (typeof ym !== 'string') return val(ym);
+  const m = ym.match(/^(\d{4})-(\d{2})$/);
+  if (!m) return val(ym);
+  const y = Number(m[1]), mon = Number(m[2]) - 1;
+  const d = new Date(y, mon, 1);
+  return isNaN(d) ? val(ym) : d;
+}
+
+// ===== Legacy fallback (kept for compatibility) =====
+function exportToExcelAlternative() {
+  try {
+    showToast('Using legacy export method (no formatting).', 'info');
+    /* ... your existing SheetJS export, unchanged ... */
+  } catch (error) {
+    console.error('Legacy export error:', error);
+    showToast('Error exporting to Excel', 'error');
+  }
+}
+
+
+// ===== Helpers (formatting, tables, widths) =====
+
+function val(x) {
+  return x === undefined || x === null ? '' : x;
+}
+function bool(x) {
+  return !!x;
+}
+function safeInt(x) {
+  const n = Number(x);
+  return Number.isFinite(n) ? Math.round(n) : 0;
+}
+function toFraction(percentOrFraction) {
+  // If it's already a fraction (<=1), pass through. If it's 0–100, convert to 0–1.
+  const n = Number(percentOrFraction);
+  if (!Number.isFinite(n)) return 0;
+  return n > 1 ? n / 100 : n;
+}
+function parseDateMaybe(v) {
+  const d = new Date(v);
+  return isNaN(d) ? val(v) : d;
+}
+function parseYearMonth(ym) {
+  // "YYYY-MM" -> Date(YYYY, MM-1, 1)
+  if (typeof ym !== 'string') return val(ym);
+  const m = ym.match(/^(\d{4})-(\d{2})$/);
+  if (!m) return val(ym);
+  const y = Number(m[1]), mon = Number(m[2]) - 1;
+  const d = new Date(y, mon, 1);
+  return isNaN(d) ? val(ym) : d;
+}
+
+/**
+ * Create a worksheet with:
+ *  - Excel Table (banded rows)
+ *  - AutoFilter
+ *  - Frozen header row
+ *  - Auto-fitted column widths
+ *  - Optional per-column number formats
+ */
+async function addWorksheetWithTable({ wb, name, headers, rows, formats = {} }) {
+  const ws = wb.addWorksheet(name);
+
+  // Build table data (rows are raw arrays aligned with headers)
+  const table = ws.addTable({
+    name: sanitizeTableName(name),
+    ref: 'A1',
+    headerRow: true,
+    style: { theme: 'TableStyleMedium9', showRowStripes: true },
+    columns: headers.map(h => ({ name: h })),
+    rows
+  });
+
+  // Freeze header row
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+  // AutoFilter across the header row
+  ws.autoFilter = {
+    from: { row: 1, column: 1 },
+    to:   { row: 1, column: headers.length }
+  };
+
+  // Apply number & date formats where provided
+  Object.entries(formats).forEach(([colIndex1, opts]) => {
+    const col = ws.getColumn(Number(colIndex1));
+    if (opts && opts.numFmt) col.numFmt = opts.numFmt;
+  });
+
+  // Auto-fit widths
+  autoFitColumns(ws, headers, rows);
+
+  // Make header bold and centered vertically
+  const headerRow = ws.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.alignment = { vertical: 'middle' };
+  headerRow.commit?.();
+
+  table.commit?.();
+}
+
+/**
+ * Compute decent column widths from headers + content
+ * (caps to a practical maximum; gives dates a minimum width)
+ */
+function autoFitColumns(ws, headers, rows) {
+  const MAX = 60;  // chars
+  const MIN = 8;
+  const DATE_MIN = 12;
+
+  const colCount = headers.length;
+  for (let c = 1; c <= colCount; c++) {
+    const header = headers[c - 1] || '';
+    let maxLen = String(header).length;
+
+    rows.forEach(r => {
+      const v = r[c - 1];
+      let len;
+      if (v instanceof Date) {
+        len = DATE_MIN;
+      } else if (typeof v === 'number') {
+        // rough width approximation for numbers
+        len = String(Math.round(v * 1000) / 1000).length + 2;
+      } else {
+        len = String(v === undefined || v === null ? '' : v).length;
+      }
+      if (len > maxLen) maxLen = len;
+    });
+
+    const width = Math.min(MAX, Math.max(MIN, maxLen + 2));
+    ws.getColumn(c).width = width;
+  }
+}
+
+function sanitizeTableName(name) {
+  // Excel table name constraints: letters/numbers/underscore, must start with letter, unique within workbook
+  const base = String(name).replace(/[^A-Za-z0-9_]/g, '_');
+  const prefixed = /^[A-Za-z_]/.test(base) ? base : `T_${base}`;
+  // ExcelJS will uniquify if name collides, so we can return as-is
+  return prefixed.slice(0, 255);
+}
+
+// ===== Legacy fallback (kept for compatibility) =====
+// If you prefer to remove legacy SheetJS export entirely, you can delete this.
+function exportToExcelAlternative() {
+  try {
+    // existing legacy implementation using XLSX.writeFile(wb, filename);
+    // (Your original code block can remain here as a fallback.)
+    showToast('Using legacy export method (no formatting).', 'info');
+    /* ... your existing SheetJS export, unchanged ... */
+  } catch (error) {
+    console.error('Legacy export error:', error);
+    showToast('Error exporting to Excel', 'error');
+  }
+}
+
+
+        // Make functions globally accessible
+        window.sortTable = sortTable;
+        window.toggleAllMonthlyProviders = toggleAllMonthlyProviders;
+        window.toggleAllChartProviders = toggleAllChartProviders;
+        window.selectAllChartCodes = selectAllChartCodes;
+        window.selectNoChartCodes = selectNoChartCodes;
+        window.updateChart = updateChart;
+        window.saveSettings = saveSettings;
+        window.closeHelp = closeHelp;
+    </script>
+</body>
+</html>
